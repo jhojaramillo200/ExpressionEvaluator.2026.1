@@ -1,59 +1,102 @@
-﻿namespace ExpressionEvaluator.Core;
+﻿using System.Globalization;
+
+namespace ExpressionEvaluator.Core;
 
 public class Evaluator
 {
     public static double Evaluate(string infix)
     {
-        var postfix = InfixToPostfix(infix);
-        return EvaluatePostfix(postfix);
+        var postfix = InfixToPostfix(infix); 
+        return EvaluatePostfix(postfix);    
     }
 
     private static string InfixToPostfix(string infix)
     {
-        var postFix = string.Empty;
+        var output = "";
         var stack = new Stack<char>();
-        foreach (var item in infix)
+        var number = "";
+
+        foreach (var c in infix.Replace(" ", ""))
         {
-            if (IsOperator(item))
+            
+            if (char.IsDigit(c) || c == '.')
             {
-                if (stack.Count == 0)
-                {
-                    stack.Push(item);
-                }
-                else
-                {
-                    if (item == ')')
-                    {
-                        do
-                        {
-                            postFix += stack.Pop();
-                        } while (stack.Peek() != '(');
-                        stack.Pop();
-                    }
-                    else
-                    {
-                        if (PriorityInfix(item) > PriorityStack(stack.Peek()))
-                        {
-                            stack.Push(item);
-                        }
-                        else
-                        {
-                            postFix += stack.Pop();
-                            stack.Push(item);
-                        }
-                    }
-                }
+                number += c;
             }
             else
             {
-                postFix += item;
+                
+                if (number != "")
+                {
+                    output += number + " ";
+                    number = "";
+                }
+
+                if (c == '(')
+                {
+                    stack.Push(c);
+                }
+                else if (c == ')')
+                {
+                    while (stack.Peek() != '(')
+                        output += stack.Pop() + " ";
+                    stack.Pop();
+                }
+                else if (IsOperator(c))
+                {
+                 
+                    while (stack.Count > 0 &&
+                           PriorityStack(stack.Peek()) >= PriorityInfix(c))
+                    {
+                        output += stack.Pop() + " ";
+                    }
+                    stack.Push(c);
+                }
             }
         }
+
+        
+        if (number != "")
+            output += number + " ";
+
+        
         while (stack.Count > 0)
+            output += stack.Pop() + " ";
+
+        return output.Trim();
+    }
+
+    private static double EvaluatePostfix(string postfix)
+    {
+        var stack = new Stack<double>();
+        var tokens = postfix.Split(' ');
+
+        foreach (var token in tokens)
         {
-            postFix += stack.Pop();
+            
+            if (double.TryParse(token, NumberStyles.Any, CultureInfo.InvariantCulture, out double num))
+            {
+                stack.Push(num);
+            }
+            else
+            {
+                
+                var b = stack.Pop();
+                var a = stack.Pop();
+
+                stack.Push(token switch
+                {
+                    "+" => a + b,
+                    "-" => a - b,
+                    "*" => a * b,
+                    "/" => a / b,
+                    "^" => Math.Pow(a, b),
+                    _ => throw new Exception("Error de sintaxis")
+                });
+            }
         }
-        return postFix;
+
+        return stack.Pop();
     }
 
     private static int PriorityStack(char item) => item switch
@@ -64,7 +107,7 @@ public class Evaluator
         '+' => 1,
         '-' => 1,
         '(' => 0,
-        _ => throw new Exception("Sintax error."),
+        _ => 0
     };
 
     private static int PriorityInfix(char item) => item switch
@@ -75,35 +118,8 @@ public class Evaluator
         '+' => 1,
         '-' => 1,
         '(' => 5,
-        _ => throw new Exception("Sintax error."),
+        _ => 0
     };
 
-    private static double EvaluatePostfix(string postfix)
-    {
-        var stack = new Stack<double>();
-        foreach (char item in postfix)
-        {
-            if (IsOperator(item))
-            {
-                var b = stack.Pop();
-                var a = stack.Pop();
-                stack.Push(item switch
-                {
-                    '+' => a + b,
-                    '-' => a - b,
-                    '*' => a * b,
-                    '/' => a / b,
-                    '^' => Math.Pow(a, b),
-                    _ => throw new Exception("Sintax error."),
-                });
-            }
-            else
-            {
-                stack.Push(double.Parse(item.ToString()));
-            }
-        }
-        return stack.Pop();
-    }
-
-    private static bool IsOperator(char item) => "+-*/^()".Contains(item);
+    private static bool IsOperator(char c) => "+-*/^".Contains(c);
 }
