@@ -6,8 +6,8 @@ public class Evaluator
 {
     public static double Evaluate(string infix)
     {
-        var postfix = InfixToPostfix(infix); 
-        return EvaluatePostfix(postfix);    
+        var postfix = InfixToPostfix(infix);
+        return EvaluatePostfix(postfix);  
     }
 
     private static string InfixToPostfix(string infix)
